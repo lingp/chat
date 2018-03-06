@@ -39,6 +39,8 @@ class RouteServiceProvider extends ServiceProvider
 
         $this->mapWebRoutes();
 
+        $this->mapChatRoutes();
+
         //
     }
 
@@ -55,6 +57,17 @@ class RouteServiceProvider extends ServiceProvider
              ->namespace($this->namespace)
              ->group(base_path('routes/web.php'));
     }
+
+    protected function mapChatRoutes()
+    {
+        Route::prefix('chat')
+            ->middleware('web')
+            ->name('chat.')
+            ->namespace($this->namespace .'\Chat')
+            ->group(base_path('routes/chat.php'));
+    }
+
+
 
     /**
      * Define the "api" routes for the application.
