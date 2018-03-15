@@ -11,8 +11,8 @@
         }
     </style>
 </head>
-<body>
-    <div class="container">
+<body onload="connect()">
+    <div class="container" >
         <nav class="navbar navbar-default" role="navigation">
             <div class="container-fluid">
                 <div class="navbar-header">
@@ -58,13 +58,13 @@
         </div>
         <div class="row">
             <div class="col-sm-11 col-xs-11">
-                <form role="form">
+                <form role="form" onsubmit="on_submit();return false;">
                     <div class="form-group">
                         <textarea id="dialog" class="form-control" rows="3"></textarea>
                     </div>
                     <div class="form-gourp">
                         <select class="form-control" id="client_list">
-                            <option value="0">所有人</option>
+                            <option value="all">所有人</option>
                         </select>
                     </div>
                     <button type="submit" class="btn btn-success">发送</button>
@@ -85,9 +85,11 @@
     var ws, name, client_list = {}
     function connect()
     {
-        ws = new WebSocket("ws://192.168.80.129:8282");
+        //TODO 总是要写死，后面要写成可配的
+        ws = new WebSocket("ws://192.168.153.139:8282");
+        console.log(ws)
         //链接socket服务器
-        ws.open = onopen;
+        ws.onopen = onopen;
         //接受消息
         ws.onmessage = onmessage;
         //关闭链接
@@ -110,14 +112,18 @@
             show_prompt();
         }
 
-        var login_data = new Array();
+        {{--room_id = "{{ $room_id }}"--}}
+        {{--login_data = '{"type":"login", ' +--}}
+                     {{--'"test_client_name":"'+ name.replace(/"/g, '\\"') +'", ' +--}}
+                     {{--'"test_room_id" : "'+ room_id +'"}'--}}
+        login_data = {};
         login_data['type'] = 'login';
-        login_data['client_name'] = name.replace(/"/g, '\\"')
-        login_data['room_id'] = "{{ $room_id }}"
-
-        login_data = JSON.stringify(login_data);
-        ws.send(login_data);
+        login_data['client_name'] = name.replace(/"/g, '\\"');
+        login_data['room_id'] = "{{ $room_id }}}";
+        login_data = JSON.stringify(login_data)
         console.log("websocket握手成功，发送登录数据:" + login_data)
+        ws.send(login_data);
+
     }
 
     // 服务端发来消息
@@ -128,7 +134,7 @@
         switch (data['type'])
         {
             case 'ping':
-                ws.send("{ 'type':'pong' }")
+                ws.send("{'type':'pong'}")
                 break;
 
             case 'login':
@@ -140,6 +146,7 @@
                 }else{
                     client_list[data['client_id']] = data['client_name']
                 }
+                console.log(client_list)
 
                 flush_client_list();
 
@@ -177,17 +184,18 @@
         var input = $(".dialog")
         var to_client_id = $("#client_list option:selected").val();
         var to_client_name = $("#client_list option:selected").text();
-        var post_data = new Array();
+        var post_data = {};
         post_data['type'] = 'say'
         post_data['to_client_id'] = to_client_id
         post_data['to_client_name'] = to_client_name
-        post_data['content'] = input[0].value.replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r')
+        post_data['content'] = input.val()
         post_data = JSON.stringify(post_data)
-
+        console.log("发送数据:"+post_data)
         ws.send(post_data)
         input.val("")
         input.focus();
     }
+
 
     // 刷新用户列表框
     function flush_client_list() {
@@ -196,10 +204,14 @@
         userlist_window.empty()
         client_list_select.empty()
 
+        client_list_select.append('<option value="all" selected>全部</option>');
+
         for (var key in client_list)
         {
-            userlist_window.append('<p class="text-center">' + client_listp[key] + '</p>')
-            client_list_select.append('<option value="'+ key+'">' + client_list[key] + '</option>');
+            console.log(key)
+            console.log(client_list[key])
+            userlist_window.append('<p class="text-center">'+client_list[key]+'</p>')
+            client_list_select.append('<option value="'+ key+'">'+client_list[key]+'</option>')
         }
 
         $("#client_list").val(client_list_select)
@@ -207,10 +219,16 @@
 
     function say(from_client_id, from_client_name, content, time)
     {
-
+        $('.msg-list-w').append("<p>"+content+"</p>");
     }
 
 
+    $(function(){
+        select_client_id = 'all';
+        $("#client_list").change(function(){
+            select_client_id = $("#client_list option:selected").attr("value");
+        });
+    });
 
 
 
